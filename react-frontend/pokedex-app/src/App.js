@@ -29,7 +29,7 @@ class App extends Component {
                 <div className="App">
                     <CustomHeader/>
                     <div className="content-container">
-                        <PokemonGetter/>
+                        {/*<PokemonGetter/>*/}
                         <LoginContainer/>
                     </div>
                 </div>
