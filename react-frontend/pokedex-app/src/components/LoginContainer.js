@@ -6,6 +6,8 @@ import {connect} from "react-redux";
 class LoginContainer extends Component {
     constructor() {
         super();
+
+
         this.state = {username: "", password: ""};
         this.updateUserState = (username)=>{this.props.updateUserState( username)};
         this.submitUser = this.submitUser.bind(this);
@@ -15,7 +17,7 @@ class LoginContainer extends Component {
     render() {
         return (
             <div>
-                <form action="localhost:8080/login">
+                <form>
                     <input id="username" type="text" onChange={this.handleChange} value={this.state.username}/>
                     <input id="password" type="password" onChange={this.handleChange} value={this.state.password}/>
                     <input type="submit" value="sign up"
@@ -47,8 +49,9 @@ class LoginContainer extends Component {
     }
 
     login(username, password) {
-        console.log("going for update");
-        axios.post("http://localhost:8080/create/user",{username,password}).then((e)=>{
+
+        console.log("LOGGING IN ");
+        axios.post("http://localhost:8080/login",{username,password },{   headers: {Authorization:Math.random().toString(36).substr(2).toString()} }).then((e)=>{
             console.log("Response ", e)
         })
         this.updateUserState(username);

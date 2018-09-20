@@ -1,52 +1,88 @@
 package com.klejar.backend.pokedexbackend.config
 
+import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.security.authentication.AuthenticationManager
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter
+import org.springframework.security.core.userdetails.UserDetailsService
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
+import org.springframework.security.crypto.password.PasswordEncoder
+import javax.sql.DataSource
+import com.google.common.collect.ImmutableList
+import org.springframework.web.cors.CorsConfiguration
+import org.springframework.web.cors.CorsConfigurationSource
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource
+import java.util.*
+
 
 @Configuration
 @EnableWebSecurity
-class WebSecurityConfig : WebSecurityConfigurerAdapter() {
+class WebSecurityConfig(
+        private val dataSource: DataSource, private val passwordEncoder: PasswordEncoder
+) : WebSecurityConfigurerAdapter() {
+
+    @Bean
+    override fun userDetailsServiceBean(): UserDetailsService {
+        return super.userDetailsServiceBean()
+    }
+
+    @Bean
+    override fun authenticationManagerBean() : AuthenticationManager {
+        return super.authenticationManagerBean()
+    }
+
     override fun configure(http: HttpSecurity) {
 
-        http.authorizeRequests()
-                /*
-                    these rules are matched one at a time, in their order.
-                    this is important to keep in mind if different URL templates
-                    can match the same URLs
-                 */
-                .antMatchers("/create/user","/login").permitAll()
-                .antMatchers("/").hasRole("USER")
-                .antMatchers("/forAdmins").hasRole("ADMIN")
-                /*
-                    whitelisting: deny everything by default,
-                    unless it was explicitly allowed in the rules
-                    above.
-                 */
-                .anyRequest().denyAll()
+        http.httpBasic()
                 .and()
+                .logout()
+                .and()
+                //
+                .authorizeRequests()
 
-                /*
-                    there are many different ways to define
-                    how login is done.
-                    So here we need to configure it.
-                    We start from looking at "Basic" HTTP,
-                    which is the simplest form of authentication
-                  */
-                .httpBasic()
+                .antMatchers("/user").authenticated()
+                .antMatchers("/login","/create/user").permitAll()
+                .antMatchers("/resource","/").hasRole("USER")
+                .anyRequest().denyAll()
+                .and().cors().and()
+
+                .csrf().disable()
     }
 
+    @Bean
+    fun corsConfigurationSource(): CorsConfigurationSource {
+        val configuration = CorsConfiguration()
+        configuration.allowedOrigins = Arrays.asList("*")
+        configuration.allowedMethods = Arrays.asList("GET", "POST")
+        configuration.allowedHeaders = Arrays.asList("*")
+        val source = UrlBasedCorsConfigurationSource()
+        source.registerCorsConfiguration("/**", configuration)
+        return source
+    }
 
-    /*
-        Here we configure how users are authenticated.
-        For simplicity here we just create some pre-defined users.
-     */
     override fun configure(auth: AuthenticationManagerBuilder) {
 
-//        auth.inMemoryAuthentication()
-//                .withUser("foo").password("{noop}123456").roles("USER").and()
-//                .withUser("admin").password("{noop}bar").roles("ADMIN", "USER")
+        auth
+                .jdbcAuthentication()
+                .dataSource(dataSource)
+                .usersByUsernameQuery("""
+                     SELECT *
+                     FROM user_entity
+                     WHERE username=?
+                     """)
+                .authoritiesByUsernameQuery("""
+                     SELECT x.username, y.roles
+                     FROM user_entity x, user_entity_roles y
+                     WHERE x.username=? and y.user_entity_id = x.id
+                     """)
+                /*
+                    Note: in BCrypt, the "password" field also contains the salt
+                 */
+
+                .passwordEncoder(passwordEncoder)
     }
+
 }
