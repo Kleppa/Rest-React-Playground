@@ -18,7 +18,7 @@ class UserService {
 
         val user = UserDto.fromDto(userDto)
 
-        user.password = passwordEncoder.encode(user.password)
+       user.password = passwordEncoder.encode(user.password)
 
         return userRepository.save(user)
     }

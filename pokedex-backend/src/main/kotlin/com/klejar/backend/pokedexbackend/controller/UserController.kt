@@ -1,6 +1,7 @@
 package com.klejar.backend.pokedexbackend.controller
 
 import com.google.gson.Gson
+import com.klejar.backend.pokedexbackend.service.CustomUserDetailsService
 import com.klejar.backend.pokedexbackend.service.DTO.UserDto
 import com.klejar.backend.pokedexbackend.service.UserService
 import org.springframework.beans.factory.annotation.Autowired
@@ -25,10 +26,12 @@ class UserController {
     private lateinit var userService: UserService
     @Autowired
     private lateinit var passwordEncoder: PasswordEncoder
-    @Autowired
-    private lateinit var userDetailsService: UserDetailsService
+    // @Autowired
+    // private lateinit var userDetailsService: UserDetailsService
     @Autowired
     private lateinit var authenticationManager: AuthenticationManager
+    @Autowired
+    private lateinit var customUserDetailsService: CustomUserDetailsService
 
 
     @PostMapping(value = ["/create/user"], consumes = ["Application/json"])
@@ -40,29 +43,24 @@ class UserController {
         return ResponseEntity.status(200).build()
     }
 
-    @PostMapping(value = ["/login"], consumes = ["Application/json"])
-    fun login(@RequestHeader("Authorization")
+    @PostMapping(value = ["/login"], consumes = ["Application/json","application/x-www-form-urlencoded"])
+    fun login(@RequestBody user: String): ResponseEntity<Void> {
+        println("USER $user")
 
-              header:String,@RequestBody user: String): ResponseEntity<Void> {
-        println("Hello this is login endpoint")
-        println("Header $header")
         val userDto = Gson().fromJson(user, UserDto::class.java)
         try {
 
             val user = userService.findByUsername(userDto.username)
-            println("Same password ${user.password == passwordEncoder.encode(userDto.password)}")
+
             println("user roles ${user.roles}")
-            val auths = ArrayList<GrantedAuthority>()
 
             println("this is useruser.roles size ${user.roles?.size}")
 
-            user.roles?.forEach { auths.add(SimpleGrantedAuthority(it)) }
+            val userDetails =  customUserDetailsService.loadUserByUsername(user.username)
 
-            println("This is the user auths $auths")
 
-            val userDetails = User(user.username,user.password,auths)
-            println("userdetails $userDetails")
-            val token = UsernamePasswordAuthenticationToken(userDetails, userDetails.password,userDetails.authorities)
+            val token = UsernamePasswordAuthenticationToken(userDetails, userDto.password,userDetails.authorities)
+            println(token)
             authenticationManager.authenticate(token)
 
             if (token.isAuthenticated) {

@@ -49,9 +49,9 @@ class LoginContainer extends Component {
     }
 
     login(username, password) {
-
+//,{   headers: {Authorization:Math.random().toString(36).substr(2).toString()}
         console.log("LOGGING IN ");
-        axios.post("http://localhost:8080/login",{username,password },{   headers: {Authorization:Math.random().toString(36).substr(2).toString()} }).then((e)=>{
+        axios.post("http://localhost:8080/login",{username,password } ).then((e)=>{
             console.log("Response ", e)
         })
         this.updateUserState(username);
